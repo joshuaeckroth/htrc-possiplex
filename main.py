@@ -38,7 +38,7 @@ with bz2.open('txts/1.json.bz2', 'rt') as f:
     uniq_tokens = sorted(page_data['tokenPosCount'].keys())
     uniq_token_count = len(uniq_tokens)
 
-    num_embeddings = 200
+    num_embeddings = 1000
     embeddings = []
     with rich.progress.Progress() as progress:
         task = progress.add_task("Embedding", total=num_embeddings)
@@ -167,7 +167,7 @@ with bz2.open('txts/1.json.bz2', 'rt') as f:
             model.Add(sum(all_end_vars) == line_count)
             # set some bool vars to random values
             #print(len(all_bool_vars))
-            for var in random.choices(all_bool_vars, k=5):
+            for var in random.choices(all_bool_vars, k=3):
                 model.Add(var == random.choice([0, 1]))
 
             solver = cp_model.CpSolver()
