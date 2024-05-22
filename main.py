@@ -5,6 +5,22 @@ from ortools.sat.python import cp_model
 
 model = cp_model.CpModel()
 
+class SolutionCounter(cp_model.CpSolverSolutionCallback):
+    """Counts the number of solutions."""
+
+    def __init__(self):
+        cp_model.CpSolverSolutionCallback.__init__(self)
+        self.__solution_count = 0
+
+    def on_solution_callback(self):
+        self.__solution_count += 1
+        if self.__solution_count % 1000 == 0:
+            print(f'Solution {self.__solution_count} found')
+
+    @property
+    def solution_count(self) -> int:
+        return self.__solution_count
+
 with bz2.open('data.json.bz2', 'rt') as f:
     data = json.load(f)
     page_data = data['features']['pages'][0]['body']
@@ -80,14 +96,17 @@ with bz2.open('data.json.bz2', 'rt') as f:
     model.Add(sum(all_end_vars) == line_count)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 10
-    solver.parameters.num_search_workers = 8
+    solution_counter = SolutionCounter()
+    #solver.parameters.max_time_in_seconds = 10
+    #solver.parameters.num_search_workers = 8
+    solver.parameters.instantiate_all_variables = False
     solver.parameters.log_search_progress = True
-    status = solver.Solve(model)
+    solver.parameters.enumerate_all_solutions = True
+    status = solver.Solve(model, solution_counter)
     if status == cp_model.FEASIBLE or status == cp_model.OPTIMAL:
-        for idx, token in enumerate(uniq_tokens):
-            token_vars = [token_idx_vars[i][idx] for i in range(page_data['tokenCount'])]
-            print(f'{token}: {sum(solver.Value(v) for v in token_vars)}')
+        #for idx, token in enumerate(uniq_tokens):
+        #    token_vars = [token_idx_vars[i][idx] for i in range(page_data['tokenCount'])]
+        #    print(f'{token}: {sum(solver.Value(v) for v in token_vars)}')
         # print sequence of tokens
         for idx in range(page_data['tokenCount']):
             for token_idx in range(uniq_token_count):
@@ -97,5 +116,6 @@ with bz2.open('data.json.bz2', 'rt') as f:
                     print(uniq_tokens[token_idx], end=' ')
     else:
         print('No solution found')
+    print()
 
 
