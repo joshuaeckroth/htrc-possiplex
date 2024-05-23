@@ -27,18 +27,24 @@ class SolutionCounter(cp_model.CpSolverSolutionCallback):
     def solution_count(self) -> int:
         return self.__solution_count
 
-with bz2.open('txts/1.json.bz2', 'rt') as f:
-    data = json.load(f)
-    original = data['features']['pages'][0]['original']
-    page_data = data['features']['pages'][0]['body']
-    #rich.print(page_data)
+with bz2.open('txts/f.json.bz2', 'rt') as f:
+    data = json.load(f)['data']
+    #original = data['features']['pages'][24]['original']
+    original = ""
+    page_data = data['features']['pages'][24]['body']
+    rich.print(page_data)
 
     line_count = page_data['lineCount'] - page_data['emptyLineCount']
+
+    total_token_count = 0
+    for token in page_data['tokenPosCount']:
+        total_token_count += sum(page_data['tokenPosCount'][token].values())
+    print(f"Total token count: {total_token_count}")
 
     uniq_tokens = sorted(page_data['tokenPosCount'].keys())
     uniq_token_count = len(uniq_tokens)
 
-    num_embeddings = 1000
+    num_embeddings = 1
     embeddings = []
     with rich.progress.Progress() as progress:
         task = progress.add_task("Embedding", total=num_embeddings)
@@ -167,15 +173,15 @@ with bz2.open('txts/1.json.bz2', 'rt') as f:
             model.Add(sum(all_end_vars) == line_count)
             # set some bool vars to random values
             #print(len(all_bool_vars))
-            for var in random.choices(all_bool_vars, k=3):
-                model.Add(var == random.choice([0, 1]))
+            #for var in random.choices(all_bool_vars, k=3):
+            #    model.Add(var == random.choice([0, 1]))
 
             solver = cp_model.CpSolver()
             solution_counter = SolutionCounter()
             solver.parameters.max_time_in_seconds = 10
             solver.parameters.num_search_workers = 8
             #solver.parameters.instantiate_all_variables = False
-            solver.parameters.log_search_progress = False
+            solver.parameters.log_search_progress = True
             #solver.parameters.enumerate_all_solutions = True
             #status = solver.Solve(model, solution_counter)
             status = solver.Solve(model)
