@@ -27,11 +27,16 @@ class SolutionCounter(cp_model.CpSolverSolutionCallback):
     def solution_count(self) -> int:
         return self.__solution_count
 
-with bz2.open('txts/f.json.bz2', 'rt') as f:
-    data = json.load(f)['data']
+# Load the extracted features
+input_file = '/Users/daniilshakirov/htrc-possiplex/htrc-possiplex/fodorrEXTRACTED.json.bz2'
+
+#make it into different folders and process the bigger text, for more repetitions
+
+with bz2.open(input_file, 'rt') as f:
+    data = json.load(f)
     #original = data['features']['pages'][24]['original']
     original = ""
-    page_data = data['features']['pages'][24]['body']
+    page_data = data['features']['pages'][0]['body'] #it was 24 not 0 here
     rich.print(page_data)
 
     line_count = page_data['lineCount'] - page_data['emptyLineCount']
@@ -44,7 +49,7 @@ with bz2.open('txts/f.json.bz2', 'rt') as f:
     uniq_tokens = sorted(page_data['tokenPosCount'].keys())
     uniq_token_count = len(uniq_tokens)
 
-    num_embeddings = 1
+    num_embeddings = 1 #CHANGE THIS NUMBER
     embeddings = []
     with rich.progress.Progress() as progress:
         task = progress.add_task("Embedding", total=num_embeddings)
@@ -81,7 +86,7 @@ with bz2.open('txts/f.json.bz2', 'rt') as f:
                 token_idx_end_vars.append(token_idx_choices_end_vars)
                 # each position must have exactly one token
                 model.Add(sum(token_idx_choices_vars) == 1)
-            
+
             # each token must be used exact number of times
             for idx, token in enumerate(uniq_tokens):
                 token_vars = [token_idx_vars[i][idx] for i in range(page_data['tokenCount'])]
@@ -171,6 +176,7 @@ with bz2.open('txts/f.json.bz2', 'rt') as f:
                 all_end_vars.extend(end_vars)
             model.Add(sum(all_start_vars) == line_count)
             model.Add(sum(all_end_vars) == line_count)
+            #If embeddings = 100, change the previous lines, we need to COMMENT OUT
             # set some bool vars to random values
             #print(len(all_bool_vars))
             #for var in random.choices(all_bool_vars, k=3):
@@ -207,16 +213,24 @@ with bz2.open('txts/f.json.bz2', 'rt') as f:
 
 embeddings = np.array(embeddings)
 print(embeddings.shape)
-with open("embeddings.npy", "wb") as f:
+with open("embeddingsEXTRACTED.npy", "wb") as f:
     np.save(f, embeddings)
 
 # csv
-with open("embeddings.csv", "w") as f:
+#with open("embeddings2.csv", "w") as f:
+    # create embedding of original
+ #   emb = emb_model.encode(original)
+ #   f.write("\t".join(str(x) for x in emb) + "\n")
+ #   for emb in embeddings:
+ #       f.write("\t".join(str(x) for x in emb) + "\n")
+
+with open("embeddingsEXTRACTED.csv", "w") as f:
     # create embedding of original
     emb = emb_model.encode(original)
-    f.write("\t".join(str(x) for x in emb) + "\n")
+    f.write(",".join(str(x) for x in emb) + "\n")  # Changed \t to ,
     for emb in embeddings:
-        f.write("\t".join(str(x) for x in emb) + "\n")
+        f.write(",".join(str(x) for x in emb) + "\n")  # Changed \t to ,
+
 
 # create csv of ids
 with open("ids.csv", "w") as f:

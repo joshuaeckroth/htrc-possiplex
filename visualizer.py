@@ -7,7 +7,7 @@ from scipy.special import fig
 
 
 #Idea. We can have 2 buttons, one of them will ask to provide the original text of the book book (previously refactored)
-# to be shown on a plot with the bright RED dot.
+#to be shown on a plot with the bright RED dot.
 #The second button would ask to provide data from csv file to plot other dots which represent variations
 #of the text.
 def select_file_csv():

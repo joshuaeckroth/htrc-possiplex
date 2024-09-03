@@ -7,7 +7,7 @@ import nltk
 from collections import Counter, defaultdict
 from nltk.tokenize import word_tokenize, sent_tokenize
 
-#nltk.download('punkt')
+nltk.download('punkt')
 
 class PageFeatureExtractor:
     hyphen_word_regex = re.compile(r"(\S*\p{L})-\n(\p{L}\S*)\s?")
@@ -82,16 +82,16 @@ class PageFeatureExtractor:
 #    data = json.load(f)
 #    page_data = data['features']['pages'][0]['body']
 #    rich.print(page_data)
+input_file = 'fodor.txt'
+output_file = 'fodorrEXTRACTED.json.bz2'
 
-with open(sys.argv[1], 'r') as f:
+
+with open(input_file, 'r') as f:
     txt = f.read().strip()
     lines = txt.split('\n')
-    rich.print(lines)
+    #rich.print(lines)
     features = PageFeatureExtractor.extract_basic_section_features(lines)
     data = {'features': {'pages': [{'body': features, 'original': txt}]}}
-    rich.print(features)
-    with bz2.open(sys.argv[2], 'wt') as f:
+    #rich.print(features)
+    with bz2.open(output_file, 'wt') as f:
         json.dump(data, f, ensure_ascii=False)
-
-
-
