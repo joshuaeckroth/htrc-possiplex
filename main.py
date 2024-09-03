@@ -2,6 +2,7 @@ import bz2
 import json
 import rich.progress
 import sys
+import re
 import random
 from ortools.sat.python import cp_model
 import sentence_transformers
@@ -28,14 +29,15 @@ class SolutionCounter(cp_model.CpSolverSolutionCallback):
         return self.__solution_count
 
 # Load the extracted features
-input_file = '/Users/daniilshakirov/htrc-possiplex/htrc-possiplex/fodorrEXTRACTED.json.bz2'
+input_file = 'fodorrEXTRACTED.json.bz2'
 
 #make it into different folders and process the bigger text, for more repetitions
 
+with open('fodor.txt') as f:
+    original = f.read().strip()
+
 with bz2.open(input_file, 'rt') as f:
     data = json.load(f)
-    #original = data['features']['pages'][24]['original']
-    original = ""
     page_data = data['features']['pages'][0]['body'] #it was 24 not 0 here
     rich.print(page_data)
 
@@ -49,7 +51,21 @@ with bz2.open(input_file, 'rt') as f:
     uniq_tokens = sorted(page_data['tokenPosCount'].keys())
     uniq_token_count = len(uniq_tokens)
 
-    num_embeddings = 1 #CHANGE THIS NUMBER
+    num_random = 100
+    rand_txts = []
+    rand_embeddings = []
+    tokens_with_repeats = []
+    for token in page_data['tokenPosCount']:
+        tokens_with_repeats += [token for _ in range(sum(page_data['tokenPosCount'][token].values()))]
+    for i in range(num_random):
+        random.shuffle(tokens_with_repeats)
+        rand_txt = " ".join(tokens_with_repeats)
+        rand_txt = re.sub(r' ([^a-zA-Z])', r'\1', rand_txt)
+        rand_txt = rand_txt.strip()
+        rand_txts.append(rand_txt)
+        rand_embeddings.append(emb_model.encode(rand_txt))
+
+    num_embeddings = 1000 #CHANGE THIS NUMBER
     embeddings = []
     with rich.progress.Progress() as progress:
         task = progress.add_task("Embedding", total=num_embeddings)
@@ -105,9 +121,7 @@ with bz2.open(input_file, 'rt') as f:
                     if token[0] == begin_char:
                         for idx in range(page_data['tokenCount']):
                             start_vars.append(token_idx_start_vars[idx][token_idx])
-                    else:
-                        for idx in range(page_data['tokenCount']):
-                            model.Add(token_idx_start_vars[idx][token_idx] == 0)
+
                 # some token must be a start of text
                 model.Add(sum(start_of_text_vars) == 1)
                 # need to check that we actually found tokens that start/end with this character,
@@ -115,6 +129,11 @@ with bz2.open(input_file, 'rt') as f:
                 # for example: "htid": "penn.ark:/81431/p3k35mf4d"
                 if len(start_vars) > 0:
                     model.Add(sum(start_vars) == begin_char_count)
+            # tokens that cannot be begin chars
+            for token_idx, token in enumerate(uniq_tokens):
+                if token[0] not in page_data['beginCharCount']:
+                    for idx in range(page_data['tokenCount']):
+                        model.Add(token_idx_start_vars[idx][token_idx] == 0)
 
             for end_char in page_data['endCharCount']:
                 end_char_count = page_data['endCharCount'][end_char]
@@ -126,13 +145,15 @@ with bz2.open(input_file, 'rt') as f:
                     if token[-1] == end_char:
                         for idx in range(page_data['tokenCount']):
                             end_vars.append(token_idx_end_vars[idx][token_idx])
-                    else:
-                        for idx in range(page_data['tokenCount']):
-                            model.Add(token_idx_end_vars[idx][token_idx] == 0)
                 # some token must be an end of text
                 model.Add(sum(end_of_text_vars) == 1)
                 if len(end_vars) > 0:
                     model.Add(sum(end_vars) == end_char_count)
+            # tokens that cannot be end chars
+            for token_idx, token in enumerate(uniq_tokens):
+                if token[-1] not in page_data['endCharCount']:
+                    for idx in range(page_data['tokenCount']):
+                        model.Add(token_idx_end_vars[idx][token_idx] == 0)
 
             all_start_vars = []
             all_end_vars = []
@@ -176,18 +197,18 @@ with bz2.open(input_file, 'rt') as f:
                 all_end_vars.extend(end_vars)
             model.Add(sum(all_start_vars) == line_count)
             model.Add(sum(all_end_vars) == line_count)
-            #If embeddings = 100, change the previous lines, we need to COMMENT OUT
-            # set some bool vars to random values
-            #print(len(all_bool_vars))
-            #for var in random.choices(all_bool_vars, k=3):
-            #    model.Add(var == random.choice([0, 1]))
+
+            if len(embeddings) == 0:
+                print("Number of bool vars:", len(all_bool_vars))
+            for var in random.choices(all_bool_vars, k=2):
+                model.Add(var == random.choice([0, 1]))
 
             solver = cp_model.CpSolver()
             solution_counter = SolutionCounter()
             solver.parameters.max_time_in_seconds = 10
             solver.parameters.num_search_workers = 8
             #solver.parameters.instantiate_all_variables = False
-            solver.parameters.log_search_progress = True
+            solver.parameters.log_search_progress = False
             #solver.parameters.enumerate_all_solutions = True
             #status = solver.Solve(model, solution_counter)
             status = solver.Solve(model)
@@ -201,40 +222,40 @@ with bz2.open(input_file, 'rt') as f:
                     for token_idx in range(uniq_token_count):
                         if solver.Value(token_idx_vars[idx][token_idx]):
                             if solver.Value(token_idx_start_vars[idx][token_idx]):
-                                txt += "\n[START]"
+                                #txt += "\n"
+                                pass
                             txt += uniq_tokens[token_idx] + " "
                             if solver.Value(token_idx_end_vars[idx][token_idx]):
-                                txt += "[END]"
+                                txt += "\n"
+                txt = re.sub(r' ([^a-zA-Z])', r'\1', txt)
                 txt = txt.strip()
                 embeddings.append(emb_model.encode(txt))
                 progress.update(task, advance=1)
                 console.print(txt)
                 console.rule()
 
-embeddings = np.array(embeddings)
-print(embeddings.shape)
-with open("embeddingsEXTRACTED.npy", "wb") as f:
-    np.save(f, embeddings)
+                if len(embeddings) % 10 == 0:
+                    console.print("Saving embeddings...")
+                    embeddings_arr = np.array(embeddings)
+                    print(embeddings_arr.shape)
+                    with open("embeddingsEXTRACTED.npy", "wb") as f:
+                        np.save(f, embeddings_arr)
 
-# csv
-#with open("embeddings2.csv", "w") as f:
-    # create embedding of original
- #   emb = emb_model.encode(original)
- #   f.write("\t".join(str(x) for x in emb) + "\n")
- #   for emb in embeddings:
- #       f.write("\t".join(str(x) for x in emb) + "\n")
+                    with open("embeddingsEXTRACTED.csv", "w") as f:
+                        # create embedding of original
+                        emb = emb_model.encode(original)
+                        f.write("\t".join(str(x) for x in emb) + "\n")
+                        for emb in embeddings:
+                            f.write("\t".join(str(x) for x in emb) + "\n")
+                        for emb in rand_embeddings:
+                            f.write("\t".join(str(x) for x in emb) + "\n")
 
-with open("embeddingsEXTRACTED.csv", "w") as f:
-    # create embedding of original
-    emb = emb_model.encode(original)
-    f.write(",".join(str(x) for x in emb) + "\n")  # Changed \t to ,
-    for emb in embeddings:
-        f.write(",".join(str(x) for x in emb) + "\n")  # Changed \t to ,
-
-
-# create csv of ids
-with open("ids.csv", "w") as f:
-    f.write("original\n")
-    for idx in range(len(embeddings)):
-        f.write(f"generated_{idx}\n")
+                    # create csv of ids
+                    with open("ids.csv", "w") as f:
+                        f.write("original\n")
+                        for idx in range(len(embeddings)):
+                            f.write(f"generated_{idx}\n")
+                        for idx in range(len(rand_embeddings)):
+                            f.write(f"random_{idx}\n")
+                    console.rule()
 

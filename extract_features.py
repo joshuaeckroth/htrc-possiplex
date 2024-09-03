@@ -82,9 +82,9 @@ class PageFeatureExtractor:
 #    data = json.load(f)
 #    page_data = data['features']['pages'][0]['body']
 #    rich.print(page_data)
+
 input_file = 'fodor.txt'
 output_file = 'fodorrEXTRACTED.json.bz2'
-
 
 with open(input_file, 'r') as f:
     txt = f.read().strip()
