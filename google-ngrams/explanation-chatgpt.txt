@@ -1,0 +1,21 @@
+The number of n-grams (whether 1-grams, 2-grams, 5-grams, or higher) that you'd expect to find in a corpus depends on a few factors, including the size of the corpus and the possible combinations of words. However, there are some general principles:
+
+Number of potential combinations:
+
+A 1-gram (unigram) consists of individual words. The number of unique 1-grams you can find in a corpus is simply the size of your vocabulary (V), which grows more slowly than combinations of words.
+A 2-gram (bigram) is a sequence of two words, so the number of potential bigrams is proportional to 𝑉^2 (where V is the vocabulary size).
+A 5-gram is a sequence of five words, so the number of potential 5-grams is proportional to 𝑉^5.
+The key takeaway is that the number of possible 5-grams is vastly larger than the number of possible 2-grams or 1-grams, simply due to the exponential nature of combinations. But this doesn't directly translate into how many you will actually observe.
+
+Observed frequency:
+
+In practice, 1-grams are much more common because individual words tend to repeat frequently in natural language.
+2-grams occur less frequently, but common phrases or word pairs (like "the dog") will be observed often enough.
+5-grams are even rarer, as the chances of seeing a specific sequence of five words in the exact order are much lower. In fact, the vast majority of 5-grams will occur only once (or not at all) in even large corpora, especially for non-repetitive or diverse texts.
+Zipf's Law:
+
+The distribution of word frequencies in natural language follows Zipf’s Law, meaning a few words (or n-grams) are very common, but most words (or n-grams) are rare.
+For longer n-grams like 5-grams, you would expect them to appear far fewer times compared to shorter n-grams (like 1-grams or 2-grams). Most 5-grams will be unique or appear just a few times, while many 1-grams and 2-grams will have high frequencies.
+Expected Difference in Counts
+You'd expect far fewer unique 5-grams compared to 1-grams or 2-grams, especially in smaller corpora or non-repetitive texts. Even in a vast corpus, most of the longer n-grams will appear very infrequently, whereas shorter n-grams like individual words or common phrases (2-grams) will repeat much more often.
+In summary, while the number of potential 5-grams is exponentially larger than that of 1-grams or 2-grams, the observed count of 5-grams will be much lower because of the rarity of exact sequences of five words appearing repeatedly in the same order.

@@ -1,0 +1,5 @@
+Total number of 1-grams in 2019: 22826152232
+Total number of 2-grams in 2019: 24012975299
+Total number of 3-grams in 2019: 22826152232
+Total number of 4-grams in 2019: 21639329784
+Total number of 5-grams in 2019: 20458636150
